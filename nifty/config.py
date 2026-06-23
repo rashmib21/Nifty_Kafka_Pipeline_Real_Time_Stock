@@ -21,3 +21,9 @@ DB_USER='root'
 DB_PASSWORD=os.getenv('DB_PASSWORD','')
 DB_NAME='nifty_db'
 
+EXCHANGE='NSE'
+
+#NSE market hours in IST
+MARKET_OPEN=(9,15) #opening time of market
+MARKET_CLOSE=(15,30) #closing time of market
+
