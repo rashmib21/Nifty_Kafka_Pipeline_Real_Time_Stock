@@ -27,3 +27,8 @@ EXCHANGE='NSE'
 MARKET_OPEN=(9,15) #opening time of market
 MARKET_CLOSE=(15,30) #closing time of market
 
+#Producer tuning
+PRODUCER_RETRIES=5 #No. of retries
+RETRY_BACKOFF_MS=500 #the waiting time before retrying after a failed request, for producer and consumer 
+BATCH_SIZE_BYTES=32768 #32 kb per batch
+LINGER_MS=20 #wait for 20 ms to fill the batch
