@@ -14,3 +14,10 @@ KAFKA_BROKER='localhost:9092'
 KAKFA_TOPIC='stock-ticks'
 KAFKA_DLQ='stock-dlq'
 KAFKA_GROUP_ID='stock-consumers'
+
+#MySQL setting
+DB_HOST='localhost'
+DB_USER='root'
+DB_PASSWORD=os.getenv('DB_PASSWORD','')
+DB_NAME='nifty_db'
+
