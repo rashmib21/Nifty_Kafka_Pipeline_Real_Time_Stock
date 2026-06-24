@@ -32,9 +32,12 @@ def get_nifty_symbols_from_nse():
     # .str.strip() removes any extra spaces before or after the name
     # .tolist() converts the column to a simple Python list
     symbol_list = nse_table['Symbol'].str.strip().tolist()
-  
+    print("NSE gave us: "+str(len(symbol_list))+" stocks")
+    return symbol_list
 
-   
-
+def get_tokens_from_angel_one(symbol_list):
+    #this function download Angel one ScripMaster & finds the token number for each stocks in our list
+    #Toke number is Angel One's internal ID for each stock, Websocket needs this token no. to subscribe to live prices
+    print("Step 2: Downloading ScripMaster from Angel One...")
     
 
