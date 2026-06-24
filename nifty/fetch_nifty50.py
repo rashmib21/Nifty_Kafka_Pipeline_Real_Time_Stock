@@ -40,4 +40,9 @@ def get_tokens_from_angel_one(symbol_list):
     #Toke number is Angel One's internal ID for each stock, Websocket needs this token no. to subscribe to live prices
     print("Step 2: Downloading ScripMaster from Angel One...")
     
+    #Downloading the ScripMaster JSON from Angel One
+    response=requests.get(ANGEL_SCRIP_URL, timeout=30)
+    response.raise_for_status()
+
+    #Convert the JSON to a pandas table
 
