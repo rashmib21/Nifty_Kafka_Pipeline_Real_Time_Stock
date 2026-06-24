@@ -45,4 +45,12 @@ def get_tokens_from_angel_one(symbol_list):
     response.raise_for_status()
 
     #Convert the JSON to a pandas table
+    all_instruments=pandas.DataFrame(response.json())
+    print("Angel One ScripMaster has "+str(len(all_instruments))+" instruments")
+
+    #Angel one stores NSE equity stock with -EQ at the end, so Reliance in NSE list becomes Reliance-EQ in ScripMaster
+    #We add -EQ to every symbol in our list
+    symbol_list_eq=[]
+    for symbol in symbol_list:
+        symbol_list_eq.append(symbol+'-EQ')
 
