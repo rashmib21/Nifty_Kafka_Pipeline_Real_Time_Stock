@@ -89,4 +89,11 @@ def fetch_all_nifty50():
 
      return instruments
 
-     
+def get_token_list(instruments):
+    #Return the list of all tokens numbers, that is what sws.subscribe() needs
+    token_list=[]
+    for instrument in instruments:
+        token_list.append(instrument['token'])
+    return token_list    
+
+
