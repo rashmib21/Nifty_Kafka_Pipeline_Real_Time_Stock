@@ -54,3 +54,22 @@ def get_tokens_from_angel_one(symbol_list):
     for symbol in symbol_list:
         symbol_list_eq.append(symbol+'-EQ')
 
+    #Now filter the big table to keep only our 50 stocks
+    #Condition 1: exch_seg must be NSE, Con. 2: instrumenttype must be -EQ, Con. 3: Symbol must be in our list of 5 stocks
+    condition1=all_instruments['exch_seg']=='NSE'
+    condition2=all_instruments['instrumenttype']=='EQ'
+    condition3=all_instruments['symbol'].isin(symbol_list_eq)
+
+
+    nifty50_instruments=all_instruments[condition1 & condition2 & condition3] 
+
+    #Keep only 3 columns we need: symbol, token, name
+    nifty50_instruments=nifty50_instruments[['symbol','token','name']]
+
+    #Reset index numbers from 0 to 49
+    nifty50_instruments=nifty50_instruments.reset_index(drop=True)
+
+    print("Found "+str(len(nifty50_instruments))+" Nifty 50 stocks in ScripMaster")
+    print(nifty50_instruments.to_string())
+      
+
