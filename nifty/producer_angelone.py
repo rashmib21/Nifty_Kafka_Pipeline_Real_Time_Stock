@@ -110,4 +110,17 @@ def on_tick(ws, tick_data):
 			#get open, high, low prices for today
 			open_price=tick.get('open_price_of_the_day',0)/100
 			high_price=tick.get('high_price_of_the_day',0)/100
-			low_price=tick.get('low_price_of_the_day',0)/100		
+			low_price=tick.get('low_price_of_the_day',0)/100	
+
+			#Build the message we want to send to Kafka
+			message={
+			"symbol":symbol,
+			"token":token,
+			'ltp':round(price_in_rupees,2),
+			'volume':volume,
+			'open':round(open_price,2),
+			'high':round(high_price,2),
+			'low':round(low_price,2),
+			'exchange_time':exchange_time,
+			'produced_at':int(time.time())
+			}	
