@@ -131,4 +131,50 @@ def on_tick(ws, tick_data):
 				key=symbol.encode('utf-8'),
 				value=message
 				)
-							
+
+			print("Sent: "+symbol+ " @ Rs. "+str(round(price_in_rupees,2)))
+
+		#All message sent successfully, commit the transactions so consumer can see these message
+		kafka_producer.commit_transaction()
+
+	except Exception as error:
+		print("Error sending to Kafka: "+str(error))
+		kafka_producer.abort_transaction()
+
+#Step 3: Login to Angel One
+print("Logging into Angel One...")
+
+#Generate 6 digit otp using our TOTP secret
+otp=pyotp.TOTP(TOTP_SECRET).now()
+
+#Create Angel One connection object
+angel_obj=SmartConnect(api_key=API_KEY)
+
+#Login with CLIENT_ID , password, otp, this returns session data including a JWT token
+session=angel_obj.generateSession(CLIENT_ID, PASSWORD, otp)
+
+#extract the jwt token from session, we need this to open WebSocket
+jwt_token=session['data']['jwtToken']
+feed_token=angel_obj.getfeedToken()
+
+print("Login Successfully!")
+
+#Step 4: Open WebSocket connection
+#Websocket stays open and angel one pushes price updates automatically
+smart_socket=SmartWebSocket(jwt_token, CLIENT_ID)
+
+#Tell Angel One which stocks we want live price for exchangeType 1 means NSE Cash Market
+subscribe_list=[{'exchangeType':1, "tokens":ws_token_list}]
+
+#set our tick function as the callback, every time a price update comes, Angel One will call on_tick()
+smart_socket.on_tick=on_tick
+print("Starting WebSocket for "+str(len(ws_token_list))+" stocks...")
+print("Waiting for market ticks...")
+
+#Start the WebSocket - this line runs forever
+# The script stays here and receives ticks continuously
+smart_socket.subscribe("nifty50_session", 1, subscribe_list)
+
+
+
+
