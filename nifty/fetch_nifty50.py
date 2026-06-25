@@ -106,3 +106,15 @@ def get_token_symbol_map(instruments):
     return token_map            
 
 
+if__name__='__main__':
+    instruments=fetch_all_nifty50()
+    print("\nToken to symbol map (first 10): ")
+    count=0
+    for token, name in token_map.items():
+        print("Token "+token+' : '+ name)
+        count=count+1
+        if count==10: 
+            break
+
+    print("\nTotal stocks ready: "+str(len(instruments)))        
+
