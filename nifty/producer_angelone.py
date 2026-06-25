@@ -49,4 +49,14 @@ def is_market_open():
 		return True
 	else:
 		return False
-			
+
+
+#Step 1: Fetch all Nifty 50 stocks and their token number from Angel One
+print("Fetching Nifty 50 stocks from NSE and Angel One...")
+instruments=fetch_all_nifty50()
+ws_token_list=get_token_list(instruments)		
+token_symbol_map=get_token_symbol_map(instruments)
+print("Ready with "+str(len(ws_token_list))+" stocks")
+
+
+
