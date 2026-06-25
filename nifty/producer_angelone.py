@@ -72,8 +72,12 @@ kafka_producer = KafkaProducer(
 	enable_idempotence=True,
 	retires=5,
 	retry_backoff_ms=500,
-	max_in_flight_requests_per_connection=1,
+	max_in_flight_requests_per_connection=1, #The producer sends one message request at a time to a broker and waits for its acknowledgment before sending the next one.
 	value_serializer=serializer )
 
 
+#Initialize transactions, this allow us to send multiple messages as one group, either all messages in the group save, or none save
+kafka_producer.init_transactions()
 
+def on_tick(ws, tick_data):
+	#Angel One call this function automatically, when every time the price is changes, tick_data is the list of price updates, one for each stock changed
