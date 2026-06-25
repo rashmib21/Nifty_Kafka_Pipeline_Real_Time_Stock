@@ -81,3 +81,33 @@ kafka_producer.init_transactions()
 
 def on_tick(ws, tick_data):
 	#Angel One call this function automatically, when every time the price is changes, tick_data is the list of price updates, one for each stock changed
+
+	#check market is open or not before doing anything
+	if is_market_open==False:
+		print("Market is closed - ignoring tick")
+		return 
+
+	#Start a transaction, all msg we send below are part of this one transaction
+	kafka_producer.begin_transaction()
+
+	try: 
+		#Loop through each stock tick in this in this update
+		for tick in tick_data:
+			#Angle One sends token number, not stock name, we convert token to stock name using our map
+			token=str(tick.get('token',''))
+			symbol=token_symbol_map.get(token, token)
+
+			#Angel one sends price in paisa(not rupees), 1 rupee=100 paisa, so we divided by 100  to convert to rupees
+			price_in_paisa=tick.get('last_traded_price',0)
+			price_in_rupees=price_in_paisa/100
+
+			#Get volume traded today
+			volume=tick.get('volume_trade_for_the_day',0)
+
+			#Get the exact time this trade happened on the exchange, this is imp for deduplication later
+			exchange_time=tick.get('exchange_timestamp', int(time.time()))
+
+			#get open, high, low prices for today
+			open_price=tick.get('open_price_of_the_day',0)/100
+			high_price=tick.get('high_price_of_the_day',0)/100
+			low_price=tick.get('low_price_of_the_day',0)/100		
