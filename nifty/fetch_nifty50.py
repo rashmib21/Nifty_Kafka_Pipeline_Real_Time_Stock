@@ -71,5 +71,9 @@ def get_tokens_from_angel_one(symbol_list):
 
     print("Found "+str(len(nifty50_instruments))+" Nifty 50 stocks in ScripMaster")
     print(nifty50_instruments.to_string())
-      
+
+    #Convert table to list of dictionaries
+    #Each dict looks like: {'symbol':"Reliance-EQ","token":"2885","name":"RELIANCE"}  
+    result=nifty50_instruments.to_dict(orient='records')
+    return result
 
