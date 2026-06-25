@@ -77,3 +77,4 @@ def get_tokens_from_angel_one(symbol_list):
     result=nifty50_instruments.to_dict(orient='records')
     return result
 
+
