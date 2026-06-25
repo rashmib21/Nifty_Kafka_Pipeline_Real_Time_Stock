@@ -58,5 +58,22 @@ ws_token_list=get_token_list(instruments)
 token_symbol_map=get_token_symbol_map(instruments)
 print("Ready with "+str(len(ws_token_list))+" stocks")
 
+def serializer(v):
+	return json.dumps(v.encode('utf-8'))
+
+#Step 2: Create Kafka Producer, this object sends the message to Kafka, acks=all means Kafka will wait for all copies (replicas) to save the message
+# enable_idempotence=True means even if we send the same message twice by mistake
+# Kafka will only save it once. This prevents duplicates at producer level.
+# retries=5 means if sending fails, try again 5 times before giving up
+
+kafka_producer = KafkaProducer(
+	bootstrap_servers=[KAFKA_BROKER],
+	acks='all',
+	enable_idempotence=True,
+	retires=5,
+	retry_backoff_ms=500,
+	max_in_flight_requests_per_connection=1,
+	value_serializer=serializer )
+
 
 
