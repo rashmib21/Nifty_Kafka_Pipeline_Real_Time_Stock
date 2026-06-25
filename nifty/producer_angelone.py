@@ -21,3 +21,22 @@ from fetch_nifty50 import (
 	get_token_list,
 	get_token_symbol_map
 	)
+
+#Create IST timezone object, we need this is check if Indian market is currently open
+IST=pytz.timezone('Asia/Kolkata')
+
+def is_market_open():
+	current_time=datetime.now(IST)
+	#check the weekdays weekday() gives 0 for monday and 6 for sunday, if weekday is 5 or 6 that means market is closed
+	if current_time.weekday()==5:
+		print("Today is Saturday-market closed")
+		return False
+
+	if current_time.weekday()==6:
+		print("Today is Sunday-market closed")
+		return False
+	#Get the hour and minute right now
+	current_hour=current_time.hours
+	current_minute=current_time.minute
+
+	#Convert current time and market times to total minutes for easy comparison, ex- 9:15 AM = 9*60 + 15 = 555 minutes
