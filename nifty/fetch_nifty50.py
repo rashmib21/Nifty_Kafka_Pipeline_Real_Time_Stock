@@ -78,3 +78,11 @@ def get_tokens_from_angel_one(symbol_list):
     return result
 
 
+def fetch_all_nifty50():
+     #This is the main function that other files will call
+     #It combines both steps above and returns the final instrument list
+     #Step 1: Get stock names from NSE
+     symbol_list=get_nifty50_symbols_from_nse()
+
+     #Step 2:Get token names from Angel One
+     instruments=get_tokens_from_angel_one(symbol_list)
