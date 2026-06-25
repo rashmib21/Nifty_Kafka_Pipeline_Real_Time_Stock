@@ -94,6 +94,15 @@ def get_token_list(instruments):
     token_list=[]
     for instrument in instruments:
         token_list.append(instrument['token'])
-    return token_list    
+    return token_list
+    
+def get_token_symbol_map(instruments):
+    #returns a dictionary that maps token number to stock name, ex. {'2885':"RELIANCE"}, we need this because websocket ticks arrives with a token number and we need to onvert back into stock due to store in DB with stock name
+    token_map={}
+    for instrument in instruments:
+        token=instrument['token']
+        name=instrument['name']
+        token_map[token]=name
+    return token_map            
 
 
