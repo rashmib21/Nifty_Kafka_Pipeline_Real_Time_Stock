@@ -86,3 +86,7 @@ def fetch_all_nifty50():
 
      #Step 2:Get token names from Angel One
      instruments=get_tokens_from_angel_one(symbol_list)
+
+     return instruments
+
+     
