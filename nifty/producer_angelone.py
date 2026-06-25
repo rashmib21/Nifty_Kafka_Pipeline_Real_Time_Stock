@@ -40,3 +40,13 @@ def is_market_open():
 	current_minute=current_time.minute
 
 	#Convert current time and market times to total minutes for easy comparison, ex- 9:15 AM = 9*60 + 15 = 555 minutes
+	current_total=current_hour*60+current_minute
+	open_total=MARKET_OPEN_HOUR*60+MARKET_OPEN_MINUTE
+	close_total+MARKET_CLOSE_HOUR*60+MARKET_CLOSE_MINUTE
+
+	#Market is open if current time is between open and close
+	if current_total>=open_total and current_total <=close_total:
+		return True
+	else:
+		return False
+			
