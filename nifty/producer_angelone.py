@@ -124,3 +124,11 @@ def on_tick(ws, tick_data):
 			'exchange_time':exchange_time,
 			'produced_at':int(time.time())
 			}	
+
+			#Send the message to Kafka, key=symbol means all message for RELIANCE always go to same partition
+			kafka_producer.send(
+				KAFKA_TOPIC,
+				key=symbol.encode('utf-8'),
+				value=message
+				)
+							
