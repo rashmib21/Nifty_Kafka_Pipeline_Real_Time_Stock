@@ -8,7 +8,7 @@ BROWSER_HEADER = {
     "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36"
 }
 
-def get_nifty_symbols_from_nse():
+def get_nifty50_symbols_from_nse():
     print("Step 1: Downloading Nifty 50 list from NSE website...")
     
     #Download the csv file from NSE, we pass browser_header so NSE does not block us
@@ -26,12 +26,12 @@ def get_nifty_symbols_from_nse():
     # but actually it is reading from memory
 
     df=pd.read_csv(io.StringIO(response.text)) # when we do request.get(url) , the response comes back as a text string like : Company name, Industry, Symbol etc
-
+    print(df.columns.tolist()) 
     
     # The CSV has a column called 'Symbol' with stock names like RELIANCE, INFY
     # .str.strip() removes any extra spaces before or after the name
     # .tolist() converts the column to a simple Python list
-    symbol_list = nse_table['Symbol'].str.strip().tolist()
+    symbol_list = df['Symbol'].str.strip().tolist()
     print("NSE gave us: "+str(len(symbol_list))+" stocks")
     return symbol_list
 
@@ -45,8 +45,28 @@ def get_tokens_from_angel_one(symbol_list):
     response.raise_for_status()
 
     #Convert the JSON to a pandas table
-    all_instruments=pandas.DataFrame(response.json())
+    all_instruments=pd.DataFrame(response.json())
     print("Angel One ScripMaster has "+str(len(all_instruments))+" instruments")
+
+      # ── ADD THESE DEBUG LINES ──────────────────────────────────────
+    print("\nColumn names in ScripMaster:")
+    print(all_instruments.columns.tolist())
+
+    print("\nUnique values in exch_seg column:")
+    print(all_instruments['exch_seg'].unique())
+
+    print("\nUnique values in instrumenttype column:")
+    print(all_instruments['instrumenttype'].unique())
+
+    print("\nSearching for RELIANCE specifically:")
+    reliance = all_instruments[all_instruments['name'] == 'RELIANCE']
+    print(reliance[['symbol', 'token', 'name', 'exch_seg', 'instrumenttype']])
+
+    print("\nFirst symbol from NSE list with -EQ added:")
+    print(symbol_list[0] + '-EQ')
+    # ── END DEBUG LINES ───────────────────────────────────────────
+
+
 
     #Angel one stores NSE equity stock with -EQ at the end, so Reliance in NSE list becomes Reliance-EQ in ScripMaster
     #We add -EQ to every symbol in our list
@@ -57,7 +77,7 @@ def get_tokens_from_angel_one(symbol_list):
     #Now filter the big table to keep only our 50 stocks
     #Condition 1: exch_seg must be NSE, Con. 2: instrumenttype must be -EQ, Con. 3: Symbol must be in our list of 5 stocks
     condition1=all_instruments['exch_seg']=='NSE'
-    condition2=all_instruments['instrumenttype']=='EQ'
+    condition2=all_instruments['instrumenttype']==''
     condition3=all_instruments['symbol'].isin(symbol_list_eq)
 
 
@@ -106,9 +126,11 @@ def get_token_symbol_map(instruments):
     return token_map            
 
 
-if__name__='__main__':
+if __name__=='__main__':
     instruments=fetch_all_nifty50()
     print("\nToken to symbol map (first 10): ")
+
+    token_map = get_token_symbol_map(instruments)   
     count=0
     for token, name in token_map.items():
         print("Token "+token+' : '+ name)
