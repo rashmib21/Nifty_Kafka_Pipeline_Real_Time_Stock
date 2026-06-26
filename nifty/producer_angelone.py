@@ -7,13 +7,13 @@ import time
 import pytz
 from datetime import datetime
 from SmartApi import SmartConnect
-from SmartApi.SmartWebSocket import SmartWebSocket
+from SmartApi.smartWebSocketV2 import SmartWebSocketV2
 from kafka import KafkaProducer
 from config import (
     API_KEY, CLIENT_ID, PASSWORD, TOTP_SECRET,
     KAFKA_BROKER, KAFKA_TOPIC,
-    MARKET_OPEN_HOUR, MARKET_OPEN_MINUTE,
-    MARKET_CLOSE_HOUR, MARKET_CLOSE_MINUTE
+    MARKET_OPEN,
+    MARKET_CLOSE
 )
 
 from fetch_nifty50 import (
@@ -36,13 +36,13 @@ def is_market_open():
 		print("Today is Sunday-market closed")
 		return False
 	#Get the hour and minute right now
-	current_hour=current_time.hours
+	current_hour=current_time.hour
 	current_minute=current_time.minute
 
 	#Convert current time and market times to total minutes for easy comparison, ex- 9:15 AM = 9*60 + 15 = 555 minutes
 	current_total=current_hour*60+current_minute
-	open_total=MARKET_OPEN_HOUR*60+MARKET_OPEN_MINUTE
-	close_total+MARKET_CLOSE_HOUR*60+MARKET_CLOSE_MINUTE
+	open_total  = MARKET_OPEN[0] * 60 + MARKET_OPEN[1]   
+	close_total = MARKET_CLOSE[0] * 60 + MARKET_CLOSE[1]
 
 	#Market is open if current time is between open and close
 	if current_total>=open_total and current_total <=close_total:
@@ -59,7 +59,7 @@ token_symbol_map=get_token_symbol_map(instruments)
 print("Ready with "+str(len(ws_token_list))+" stocks")
 
 def serializer(v):
-	return json.dumps(v.encode('utf-8'))
+    return json.dumps(v).encode('utf-8')
 
 #Step 2: Create Kafka Producer, this object sends the message to Kafka, acks=all means Kafka will wait for all copies (replicas) to save the message
 # enable_idempotence=True means even if we send the same message twice by mistake
@@ -70,10 +70,11 @@ kafka_producer = KafkaProducer(
 	bootstrap_servers=[KAFKA_BROKER],
 	acks='all',
 	enable_idempotence=True,
-	retires=5,
+	retries=5,
 	retry_backoff_ms=500,
 	max_in_flight_requests_per_connection=1, #The producer sends one message request at a time to a broker and waits for its acknowledgment before sending the next one.
-	value_serializer=serializer )
+	value_serializer=serializer,
+	transactional_id='nifty-producer' )
 
 
 #Initialize transactions, this allow us to send multiple messages as one group, either all messages in the group save, or none save
@@ -83,7 +84,7 @@ def on_tick(ws, tick_data):
 	#Angel One call this function automatically, when every time the price is changes, tick_data is the list of price updates, one for each stock changed
 
 	#check market is open or not before doing anything
-	if is_market_open==False:
+	if is_market_open()==False:
 		print("Market is closed - ignoring tick")
 		return 
 
@@ -161,20 +162,32 @@ print("Login Successfully!")
 
 #Step 4: Open WebSocket connection
 #Websocket stays open and angel one pushes price updates automatically
-smart_socket=SmartWebSocket(jwt_token, CLIENT_ID)
+smart_socket = SmartWebSocketV2(
+    API_KEY,      
+    CLIENT_ID,    
+    jwt_token,    
+    feed_token    
+)
 
-#Tell Angel One which stocks we want live price for exchangeType 1 means NSE Cash Market
-subscribe_list=[{'exchangeType':1, "tokens":ws_token_list}]
 
-#set our tick function as the callback, every time a price update comes, Angel One will call on_tick()
-smart_socket.on_tick=on_tick
-print("Starting WebSocket for "+str(len(ws_token_list))+" stocks...")
+def on_open(ws):
+    print("WebSocket connected!")
+    print("Subscribing to " + str(len(ws_token_list)) + " stocks...")
+    subscribe_list = [{"exchangeType": 1, "tokens": ws_token_list}]
+    smart_socket.subscribe("nifty50_session", 1, subscribe_list)
+
+def on_error(ws, error):
+    print("WebSocket error: " + str(error))
+
+# This runs when connection closes
+def on_close(ws):
+    print("WebSocket closed")
+
+smart_socket.on_open  = on_open
+smart_socket.on_data  = on_tick    # on_data not on_tick for V2
+smart_socket.on_error = on_error
+smart_socket.on_close = on_close
+
+print("Starting WebSocket for " + str(len(ws_token_list)) + " stocks...")
 print("Waiting for market ticks...")
-
-#Start the WebSocket - this line runs forever
-# The script stays here and receives ticks continuously
-smart_socket.subscribe("nifty50_session", 1, subscribe_list)
-
-
-
 
