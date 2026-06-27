@@ -28,4 +28,8 @@ def is_market_open():
     else:
         return False
 
-                
+#Create Kafka Consumer
+#group_id='stock-consumers' means this consumer is part of the DB saving group
+#enable_auto_commit=False means we manually tell Kafka when we are done
+kafka_consumer=KafkaConsumer(
+    )                
