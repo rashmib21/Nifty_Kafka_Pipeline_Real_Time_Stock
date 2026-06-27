@@ -32,4 +32,11 @@ def is_market_open():
 #group_id='stock-consumers' means this consumer is part of the DB saving group
 #enable_auto_commit=False means we manually tell Kafka when we are done
 kafka_consumer=KafkaConsumer(
+    KAFKA_TOPIC,
+    bootstrap_servers=[KAFKA_BROKER],
+    group_id=KAFKA_GROUP_DB,
+    auto_offset_reset='earliest',
+    enable_auto_commit=False,
+    isolation_level='read_committed',
+    value_deserializer=deserializer
     )                
