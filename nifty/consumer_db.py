@@ -28,6 +28,10 @@ def is_market_open():
     else:
         return False
 
+#function of deserializer
+def deserializer(v):
+    return json.loads(v).decode('utf-8') 
+
 #Create Kafka Consumer
 #group_id='stock-consumers' means this consumer is part of the DB saving group
 #enable_auto_commit=False means we manually tell Kafka when we are done
@@ -47,4 +51,10 @@ mysql_connection=mysql.connector.connect(
     user=DB_USER,
     password=DB_PASSWORD,
     database=DB_NAME
-    ) 
+    )
+mysql_cursor=mysql_connection.cursor()
+
+#This producer sends failed messages to DLQ topic
+dlq_producer=KafkaProducer(
+    bootstrap_servers=[KAFKA_BROKER],
+    value_serializer=serializer)     
