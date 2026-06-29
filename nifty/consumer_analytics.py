@@ -38,15 +38,17 @@ def is_market_open():
     else:
         return False
 
+def deserializer(v):
+    return json.loads(v).decode('utf-8') 
 
 kafka_consumer = KafkaConsumer(
     KAFKA_TOPIC,
     bootstrap_servers  = [KAFKA_BROKER],
-    group_id           = 'analytics-consumer-group',
-    auto_offset_reset  = 'earliest',
+    group_id = 'analytics-consumer-group',
+    auto_offset_reset = 'earliest',
     enable_auto_commit = False,
-    isolation_level    = 'read_committed',
-    value_deserializer = lambda v: json.loads(v.decode('utf-8'))
+    isolation_level = 'read_committed',
+    value_deserializer = deserializer
 )
  
 mysql_connection = mysql.connector.connect(
