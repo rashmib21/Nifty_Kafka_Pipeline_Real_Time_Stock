@@ -57,5 +57,95 @@ mysql_connection = mysql.connector.connect(
 )
 mysql_cursor = mysql_connection.cursor()
  
+
+def update_analytics(data):
+    symbol     = data.get('symbol', '')
+    ltp        = data.get('ltp', 0)
+    volume     = data.get('volume', 0)
+    open_price = data.get('open', 0)
+ 
+    if symbol == '' or ltp == 0:
+        return
+ 
+    # If this is first tick for this stock today, set up initial values
+    if symbol not in running_totals:
+        running_totals[symbol] = {
+            'total_price_x_volume' : 0,
+            'total_volume'         : 0,
+            'tick_count'           : 0,
+            'day_high'             : ltp,
+            'day_low'              : ltp
+        }
+ 
+    stock = running_totals[symbol]
+ 
+    # Update tick count
+    stock['tick_count'] = stock['tick_count'] + 1
+ 
+    # Update day high
+    if ltp > stock['day_high']:
+        stock['day_high'] = ltp
+ 
+    # Update day low
+    if ltp < stock['day_low']:
+        stock['day_low'] = ltp
+ 
+    # Add to running totals for VWAP
+    # VWAP = sum of (each price x its volume) divided by total volume
+    # We keep adding to these totals every tick
+    stock['total_price_x_volume'] = stock['total_price_x_volume'] + (ltp * volume)
+    stock['total_volume']         = stock['total_volume'] + volume
+ 
+    # Calculate VWAP now
+    if stock['total_volume'] > 0:
+        vwap = stock['total_price_x_volume'] / stock['total_volume']
+        vwap = round(vwap, 2)
+    else:
+        vwap = ltp
+ 
+    # Calculate price change percent from open
+    if open_price > 0:
+        price_change_percent = ((ltp - open_price) / open_price) * 100
+        price_change_percent = round(price_change_percent, 2)
+    else:
+        price_change_percent = 0
+ 
+    # Save to MySQL
+    # ON DUPLICATE KEY UPDATE means:
+    # If row for this symbol already exists -> update it
+    # If row does not exist yet -> insert a new one
+    # This keeps exactly one row per stock with latest values
+    sql = """
+        INSERT INTO stock_analytics
+        (symbol, ltp, vwap, price_change_percent, day_high, day_low, tick_count, updated_at)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, NOW())
+        ON DUPLICATE KEY UPDATE
+            ltp                  = VALUES(ltp),
+            vwap                 = VALUES(vwap),
+            price_change_percent = VALUES(price_change_percent),
+            day_high             = VALUES(day_high),
+            day_low              = VALUES(day_low),
+            tick_count           = VALUES(tick_count),
+            updated_at           = NOW()
+    """
+ 
+    values = (
+        symbol,
+        ltp,
+        vwap,
+        price_change_percent,
+        stock['day_high'],
+        stock['day_low'],
+        stock['tick_count']
+    )
+ 
+    mysql_cursor.execute(sql, values)
+    mysql_connection.commit()
+ 
+    print("Analytics: " + symbol +
+          " LTP=" + str(ltp) +
+          " VWAP=" + str(vwap) +
+          " Change=" + str(price_change_percent) + "%")
+ 
          
 
