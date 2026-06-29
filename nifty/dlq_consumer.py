@@ -19,3 +19,52 @@ dlq_consumer = KafkaConsumer(
     enable_auto_commit = True,
     value_deserializer = deserializer
 )
+
+# Connect to MySQL to save failure records
+mysql_connection = mysql.connector.connect(
+    host     = DB_HOST,
+    user     = DB_USER,
+    password = DB_PASSWORD,
+    database = DB_NAME
+)
+mysql_cursor = mysql_connection.cursor()
+
+print("DLQ Monitor started. Watching topic: " + KAFKA_DLQ)
+
+# Read every failed message from DLQ topic one by one
+for kafka_message in dlq_consumer:
+ 
+    data = kafka_message.value
+ 
+    # Extract the three fields we saved in send_to_dlq() in consumer_db.py
+    original_message = json.dumps(data.get('original_message', {}))
+    error_reason     = data.get('error_reason', 'unknown reason')
+    failed_at        = data.get('failed_at', int(time.time()))
+ 
+    # Always print to terminal first
+    # Even if database save fails below, we can see the failure in terminal
+    print("\n--- FAILED MESSAGE ---")
+    print("Reason   : " + error_reason)
+    print("Failed at: " + str(failed_at))
+    print("Message  : " + original_message[:200])
+ 
+    # Try to save this failure record to MySQL
+    try:
+        sql = """
+            INSERT INTO dlq_messages
+            (raw_payload, error_reason, failed_at, retried)
+            VALUES (%s, %s, FROM_UNIXTIME(%s), 0)
+        """
+ 
+        # FROM_UNIXTIME converts the number 1718001234
+        # into a readable date like '2024-06-10 10:33:54'
+ 
+        mysql_cursor.execute(sql, (original_message, error_reason, failed_at))
+        mysql_connection.commit()
+ 
+        print("Saved to dlq_messages table")
+ 
+    except Exception as error:
+        # If saving to database also fails, at least we printed to terminal above
+        print("Could not save to database: " + str(error))
+ 
