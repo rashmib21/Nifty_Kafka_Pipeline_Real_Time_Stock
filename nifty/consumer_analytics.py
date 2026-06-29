@@ -26,4 +26,16 @@ IST = pytz.timezone('Asia/Kolkata')
 
 running_totals = {}
 
+def is_market_open():
+    current_time  = datetime.now(IST)
+    current_total = current_time.hour * 60 + current_time.minute
+    open_total    = MARKET_OPEN[0] * 60 + MARKET_OPEN[1]
+    close_total   = MARKET_CLOSE[0] * 60 + MARKET_CLOSE[1]
+    if current_time.weekday() >= 5:
+        return False
+    if current_total >= open_total and current_total <= close_total:
+        return True
+    else:
+        return False
+
 
