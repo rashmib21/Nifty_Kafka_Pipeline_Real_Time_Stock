@@ -130,6 +130,25 @@ for kafka_message in kafka_consumer:
     attempt=0
     save_success=False
 
-            
+    while attempt<3:
+        try: 
+            save_to_database(data)
+            save_success=True
+            print("Saved: "+symbol+" @ Rs. "+str(data.get('ltp')))
+            break
+        except Exception as error: 
+            attempt=attempt+1
+            print("Save failed attempt "+str(attempt)+": "+str(error))
+            time.sleep(0.5)
+            try:
+                mysql_connection.rollback()
+            except:
+                pass
+    if save_success==True:
+        #Tell Kafka we are done with this message only after MySQL saved it
+        kafka_consumer.commit()
+    else:
+        send_to_dlq(data, 'Database save failed after 3 attempts')
+        kafka_consumer.commit()                                
 
 
