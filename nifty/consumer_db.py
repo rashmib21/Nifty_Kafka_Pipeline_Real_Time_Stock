@@ -8,8 +8,8 @@ import mysql.connector
 from config import (
 	KAFKA_BROKER, KAFKA_TOPIC, KAFKA_DLQ, KAFKA_GROUP_ID,
     DB_HOST, DB_USER, DB_PASSWORD, DB_NAME,
-    MARKET_OPEN_HOUR, MARKET_OPEN_MINUTE,
-    MARKET_CLOSE_HOUR, MARKET_CLOSE_MINUTE)
+    MARKET_OPEN
+    , MARKET_CLOSE)
 
 IST=pytz.timezone('Asia/Kolkata')
 
@@ -38,7 +38,7 @@ def deserializer(v):
 kafka_consumer=KafkaConsumer(
     KAFKA_TOPIC,
     bootstrap_servers=[KAFKA_BROKER],
-    group_id=KAFKA_GROUP_DB,
+    group_id=KAFKA_GROUP_ID,
     auto_offset_reset='earliest',
     enable_auto_commit=False,
     isolation_level='read_committed',

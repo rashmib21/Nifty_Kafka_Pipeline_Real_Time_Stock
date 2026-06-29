@@ -30,7 +30,7 @@ def get_nifty50_symbols_from_nse():
     
     # The CSV has a column called 'Symbol' with stock names like RELIANCE, INFY
     # .str.strip() removes any extra spaces before or after the name
-    # .tolist() converts the column to a simple Python list
+    # .tolist() converts the column to a simple thon list
     symbol_list = df['Symbol'].str.strip().tolist()
     print("NSE gave us: "+str(len(symbol_list))+" stocks")
     return symbol_list
