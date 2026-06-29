@@ -48,5 +48,14 @@ kafka_consumer = KafkaConsumer(
     isolation_level    = 'read_committed',
     value_deserializer = lambda v: json.loads(v.decode('utf-8'))
 )
+ 
+mysql_connection = mysql.connector.connect(
+    host     = DB_HOST,
+    user     = DB_USER,
+    password = DB_PASSWORD,
+    database = DB_NAME
+)
+mysql_cursor = mysql_connection.cursor()
+ 
          
 
