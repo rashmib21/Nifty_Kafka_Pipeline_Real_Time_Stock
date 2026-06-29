@@ -91,5 +91,45 @@ def save_to_database(data):
     values=(symbol, ltp, volume, open_price, high_price, low_price, exchange_time)
     mysql_cursor.execute(sql, value)
     mysql_connection.commit()
-print("Consumer DB started. Waiting for messages...")        
+print("Consumer DB started. Waiting for messages...")
+
+for kafka_message in kafka_consumer:
+    data=kafka_message.value
+    symbol=data.get('symbol','')
+    exchange_time=data.get('exchange_time', None)
+
+    #Check Skip if market is closed
+    if is_market_open()==False:
+        kafka_consumer.commit()
+        continue
+    #Check symbol must exist
+    if symbol=='':
+        send_to_dlq(data,'symbol field is missing')
+        kafka_consumer.commit()
+        continue
+    #Check exchange_time must exist (need for deduplication)
+    if exchange_time is None:
+        send_to_dlq(data, 'exchange_time field is missing')
+        kafka_consumer.commit()
+        continue
+    #Check In-memory duplication, build a unique key for the tick
+    tick_key=symbol+'_'+str(exchange_time)
+
+    if tick_key in seen_tick_keys:
+        print("Duplicate tick skipped: "+tick_key)
+        kafka_consumer.commit()
+        continue
+    #Clear set if it gets too big to save memory
+    if len(seen_tick_keys)>=50000:
+        seen_tick_keys.clear()
+        print("Dedup set cleared")
+
+    seen_tick_keys.add(tick_key)
+    
+    #Try to save to MySQL up to 3 times
+    attempt=0
+    save_success=False
+
+            
+
 
