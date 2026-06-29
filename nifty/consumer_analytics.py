@@ -59,9 +59,9 @@ mysql_cursor = mysql_connection.cursor()
  
 
 def update_analytics(data):
-    symbol     = data.get('symbol', '')
-    ltp        = data.get('ltp', 0)
-    volume     = data.get('volume', 0)
+    symbol= data.get('symbol', '')
+    ltp = data.get('ltp', 0)
+    volume = data.get('volume', 0)
     open_price = data.get('open', 0)
  
     if symbol == '' or ltp == 0:
@@ -71,10 +71,10 @@ def update_analytics(data):
     if symbol not in running_totals:
         running_totals[symbol] = {
             'total_price_x_volume' : 0,
-            'total_volume'         : 0,
-            'tick_count'           : 0,
-            'day_high'             : ltp,
-            'day_low'              : ltp
+            'total_volume': 0,
+            'tick_count': 0,
+            'day_high': ltp,
+            'day_low': ltp
         }
  
     stock = running_totals[symbol]
@@ -94,7 +94,7 @@ def update_analytics(data):
     # VWAP = sum of (each price x its volume) divided by total volume
     # We keep adding to these totals every tick
     stock['total_price_x_volume'] = stock['total_price_x_volume'] + (ltp * volume)
-    stock['total_volume']         = stock['total_volume'] + volume
+    stock['total_volume'] = stock['total_volume'] + volume
  
     # Calculate VWAP now
     if stock['total_volume'] > 0:
@@ -120,13 +120,13 @@ def update_analytics(data):
         (symbol, ltp, vwap, price_change_percent, day_high, day_low, tick_count, updated_at)
         VALUES (%s, %s, %s, %s, %s, %s, %s, NOW())
         ON DUPLICATE KEY UPDATE
-            ltp                  = VALUES(ltp),
-            vwap                 = VALUES(vwap),
+            ltp = VALUES(ltp),
+            vwap = VALUES(vwap),
             price_change_percent = VALUES(price_change_percent),
-            day_high             = VALUES(day_high),
-            day_low              = VALUES(day_low),
-            tick_count           = VALUES(tick_count),
-            updated_at           = NOW()
+            day_high = VALUES(day_high),
+            day_low = VALUES(day_low),
+            tick_count = VALUES(tick_count),
+            updated_at = NOW()
     """
  
     values = (
@@ -147,5 +147,28 @@ def update_analytics(data):
           " VWAP=" + str(vwap) +
           " Change=" + str(price_change_percent) + "%")
  
-         
+print("Analytics Consumer started. Waiting for messages...")
+ 
+for kafka_message in kafka_consumer:
+ 
+    data = kafka_message.value
+ 
+    if is_market_open() == False:
+        kafka_consumer.commit()
+        continue
+ 
+    try:
+        update_analytics(data)
+        kafka_consumer.commit()
+    except Exception as error:
+        print("Analytics update failed: " + str(error))
+        kafka_consumer.commit()
+ 
+
+
+
+
+
+
+
 
