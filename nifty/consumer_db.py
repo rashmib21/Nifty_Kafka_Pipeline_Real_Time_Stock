@@ -54,7 +54,22 @@ mysql_connection=mysql.connector.connect(
     )
 mysql_cursor=mysql_connection.cursor()
 
+#Function of serializer
+def serializer(v):
+    return json.dumps(v).encode('utf-8')
+
 #This producer sends failed messages to DLQ topic
 dlq_producer=KafkaProducer(
     bootstrap_servers=[KAFKA_BROKER],
-    value_serializer=serializer)     
+    value_serializer=serializer
+    )
+def send_to_dlq(failed_message, reason):
+    #Never silently drop a failed message, always send it to DLQ topic
+    dlq_message={
+    'original_message':failed_message,
+    'error_reason':reason,
+    'failed_at':int(time.time())
+    }         
+    dlq_producer.send(KAFKA_DLQ, value=dlq_message)
+    dlq_producer.flush()
+    print("Send to DLQ: "+reason)
