@@ -44,7 +44,11 @@ kafka_consumer=KafkaConsumer(
     auto_offset_reset='earliest',
     enable_auto_commit=False,
     isolation_level='read_committed',
-    value_deserializer=deserializer
+    value_deserializer=deserializer,
+    session_timeout_ms     = 30000, #30 sec, dont assume consumer dead
+    heartbeat_interval_ms  = 10000, #send heartbeat in every 10 sec
+    max_poll_interval_ms   = 300000 #processing for 5 minutes
+
     )                
 
 #Open MySQL connection and reuse it for all rows
