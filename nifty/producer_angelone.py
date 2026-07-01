@@ -10,10 +10,10 @@ from SmartApi import SmartConnect
 from SmartApi.smartWebSocketV2 import SmartWebSocketV2
 from kafka import KafkaProducer
 from config import (
-    API_KEY, CLIENT_ID, PASSWORD, TOTP_SECRET,
-    KAFKA_BROKER, KAFKA_TOPIC,
-    MARKET_OPEN,
-    MARKET_CLOSE
+	API_KEY, CLIENT_ID, PASSWORD, TOTP_SECRET,
+	KAFKA_BROKER, KAFKA_TOPIC,
+	MARKET_OPEN,
+	MARKET_CLOSE
 )
 
 from fetch_nifty50 import (
@@ -59,7 +59,7 @@ token_symbol_map=get_token_symbol_map(instruments)
 print("Ready with "+str(len(ws_token_list))+" stocks")
 
 def serializer(v):
-    return json.dumps(v).encode('utf-8')
+	return json.dumps(v).encode('utf-8')
 
 #Step 2: Create Kafka Producer, this object sends the message to Kafka, acks=all means Kafka will wait for all copies (replicas) to save the message
 # enable_idempotence=True means even if we send the same message twice by mistake
@@ -82,6 +82,8 @@ kafka_producer.init_transactions()
 
 def on_tick(ws, tick_data):
 	#Angel One call this function automatically, when every time the price is changes, tick_data is the list of price updates, one for each stock changed
+	print("RAW TICK DATA:", tick_data)
+	print("TYPE:", type(tick_data))
 
 	#check market is open or not before doing anything
 	if is_market_open()==False:
@@ -93,50 +95,44 @@ def on_tick(ws, tick_data):
 
 	try: 
 		#Loop through each stock tick in this in this update
-		for tick in tick_data:
-			#Angle One sends token number, not stock name, we convert token to stock name using our map
-			token=str(tick.get('token',''))
-			symbol=token_symbol_map.get(token, token)
+		token  = str(tick_data.get('token', ''))
+		symbol = token_symbol_map.get(token, token)
 
-			#Angel one sends price in paisa(not rupees), 1 rupee=100 paisa, so we divided by 100  to convert to rupees
-			price_in_paisa=tick.get('last_traded_price',0)
-			price_in_rupees=price_in_paisa/100
+		price_in_paisa  = tick_data.get('last_traded_price', 0)
+		price_in_rupees = price_in_paisa / 100
 
-			#Get volume traded today
-			volume=tick.get('volume_trade_for_the_day',0)
+		volume        = tick_data.get('volume_trade_for_the_day', 0)
+		exchange_time = tick_data.get('exchange_timestamp', int(time.time()))
 
-			#Get the exact time this trade happened on the exchange, this is imp for deduplication later
-			exchange_time=tick.get('exchange_timestamp', int(time.time()))
+		open_price = tick_data.get('open_price_of_the_day', 0) / 100
+		high_price = tick_data.get('high_price_of_the_day', 0) / 100
+		low_price  = tick_data.get('low_price_of_the_day', 0) / 100
 
-			#get open, high, low prices for today
-			open_price=tick.get('open_price_of_the_day',0)/100
-			high_price=tick.get('high_price_of_the_day',0)/100
-			low_price=tick.get('low_price_of_the_day',0)/100	
+		message = {
+			"symbol":        symbol,
+			"token":         token,
+			'ltp':           round(price_in_rupees, 2),
+			'volume':        volume,
+			'open':          round(open_price, 2),
+			'high':          round(high_price, 2),
+			'low':           round(low_price, 2),
+			'exchange_time': exchange_time,
+			'produced_at':   int(time.time())
+		}
 
-			#Build the message we want to send to Kafka
-			message={
-			"symbol":symbol,
-			"token":token,
-			'ltp':round(price_in_rupees,2),
-			'volume':volume,
-			'open':round(open_price,2),
-			'high':round(high_price,2),
-			'low':round(low_price,2),
-			'exchange_time':exchange_time,
-			'produced_at':int(time.time())
-			}	
+		kafka_producer.send(
+			KAFKA_TOPIC,
+			key   = symbol.encode('utf-8'),
+			value = message
+		)
 
-			#Send the message to Kafka, key=symbol means all message for RELIANCE always go to same partition
-			kafka_producer.send(
-				KAFKA_TOPIC,
-				key=symbol.encode('utf-8'),
-				value=message
-				)
+		print("Sent: " + symbol + " @ Rs. " + str(round(price_in_rupees, 2)))
 
-			print("Sent: "+symbol+ " @ Rs. "+str(round(price_in_rupees,2)))
-
-		#All message sent successfully, commit the transactions so consumer can see these message
 		kafka_producer.commit_transaction()
+
+	except Exception as error:
+		print("Error sending to Kafka: " + str(error))
+		kafka_producer.abort_transaction()
 
 	except Exception as error:
 		print("Error sending to Kafka: "+str(error))
@@ -163,25 +159,25 @@ print("Login Successfully!")
 #Step 4: Open WebSocket connection
 #Websocket stays open and angel one pushes price updates automatically
 smart_socket = SmartWebSocketV2(
-    API_KEY,      
-    CLIENT_ID,    
-    jwt_token,    
-    feed_token    
+	API_KEY,      
+	CLIENT_ID,    
+	jwt_token,    
+	feed_token    
 )
 
 
 def on_open(ws):
-    print("WebSocket connected!")
-    print("Subscribing to " + str(len(ws_token_list)) + " stocks...")
-    subscribe_list = [{"exchangeType": 1, "tokens": ws_token_list}]
-    smart_socket.subscribe("nifty50_session", 1, subscribe_list)
+	print("WebSocket connected!")
+	print("Subscribing to " + str(len(ws_token_list)) + " stocks...")
+	subscribe_list = [{"exchangeType": 1, "tokens": ws_token_list}]
+	smart_socket.subscribe("nifty50_session", 2, subscribe_list)  
 
 def on_error(ws, error):
-    print("WebSocket error: " + str(error))
+	print("WebSocket error: " + str(error))
 
 # This runs when connection closes
 def on_close(ws):
-    print("WebSocket closed")
+	print("WebSocket closed")
 
 smart_socket.on_open  = on_open
 smart_socket.on_data  = on_tick    # on_data not on_tick for V2
@@ -191,3 +187,4 @@ smart_socket.on_close = on_close
 print("Starting WebSocket for " + str(len(ws_token_list)) + " stocks...")
 print("Waiting for market ticks...")
 
+smart_socket.connect()
