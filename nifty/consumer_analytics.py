@@ -39,7 +39,7 @@ def is_market_open():
         return False
 
 def deserializer(v):
-    return json.loads(v).decode('utf-8') 
+    return json.loads(v.decode('utf-8')) 
 
 kafka_consumer = KafkaConsumer(
     KAFKA_TOPIC,
