@@ -30,7 +30,9 @@ def is_market_open():
 
 #function of deserializer
 def deserializer(v):
-    return json.loads(v).decode('utf-8') 
+    return json.loads(v.decode('utf-8'))
+
+ 
 
 #Create Kafka Consumer
 #group_id='stock-consumers' means this consumer is part of the DB saving group
@@ -75,21 +77,21 @@ def send_to_dlq(failed_message, reason):
     print("Send to DLQ: "+reason)
 
 def save_to_database(data):
-    symbol=data.get('symbol',''),
-    ltp=data.get('ltp',0),
-    volume=data.get('volume',0),
-    open_price=data.get('open',0),
-    high_price=data.gt('high',0),
-    low_price=data.get('low',0),
+    symbol=data.get('symbol','')
+    ltp=data.get('ltp',0)
+    volume=data.get('volume',0)
+    open_price=data.get('open',0)
+    high_price=data.get('high',0)
+    low_price=data.get('low',0)
     exchange_time=data.get('exchange_time',0)
 
     #Insert ignore means if the same (symbol, exhange_time) already exits in db mysql will silently skip it without any error
     sql="""
         INSERT IGNORE INTO stock_ticks
-        (symbol, ltp, volume, open, high, low, exhange_time)
+        (symbol, ltp, volume, open, high, low, exchange_time)
         VALUES (%s, %s, %s, %s, %s, %s, %s)"""
     values=(symbol, ltp, volume, open_price, high_price, low_price, exchange_time)
-    mysql_cursor.execute(sql, value)
+    mysql_cursor.execute(sql, values,)
     mysql_connection.commit()
 print("Consumer DB started. Waiting for messages...")
 
