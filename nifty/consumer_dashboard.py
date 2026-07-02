@@ -13,17 +13,17 @@
 
 import json
 import time
-import pytz
-import threading
+import pytz #handles time zone
+import threading #used to run multiple task simultaneously
 from datetime import datetime
 from kafka import KafkaConsumer
 import mysql.connector
-import dash
-from dash import dcc
-from dash import html
-from dash.dependencies import Input
+import dash #used to create web app
+from dash import dcc #Dash core component(graphs, dropdowns, intervals)
+from dash import html #html components like div, table, etc
+from dash.dependencies import Input #used for dash callbacks
 from dash.dependencies import Output
-import plotly.graph_objects as go
+import plotly.graph_objects as go #used to create interactive charts
 
 from config import (
     KAFKA_BROKER, KAFKA_TOPIC,
@@ -42,12 +42,12 @@ latest_prices = {}
 
 def is_market_open():
     current_time = datetime.now(IST)
-    current_total = current_time.hour * 60 + current_time.minute
-    open_total = MARKET_OPEN[0] * 60 + MARKET_OPEN[1]
+    current_total = current_time.hour * 60 + current_time.minute #convert current time into minutes
+    open_total = MARKET_OPEN[0] * 60 + MARKET_OPEN[1] #convert market opening and closing times into minutes
     close_total = MARKET_CLOSE[0] * 60 + MARKET_CLOSE[1]
     if current_time.weekday() >= 5:
         return False
-    if current_total >= open_total and current_total <= close_total:
+    if current_total >= open_total and current_total <= close_total: #Market is open
         return True
     else:
         return False
@@ -67,7 +67,7 @@ def get_new_db_connection():
 def deserializer(v):
     return json.loads(v.decode('utf-8')) 
 
-# ── Background thread: reads Kafka and updates latest_prices ─────────────────
+# Background thread: reads Kafka and updates latest_prices 
 # This runs in background so dashboard can keep showing while data comes in
 # Thread and dashboard both run at same time
 def read_kafka_in_background():
@@ -76,14 +76,13 @@ def read_kafka_in_background():
         bootstrap_servers = [KAFKA_BROKER],
         group_id = 'dashboard-consumer-group',
         # auto_offset_reset = 'latest' means only read NEW messages
-        # We don't want to replay hours of old messages for a live dashboard
         auto_offset_reset = 'latest',
         enable_auto_commit = True,
-        isolation_level = 'read_committed',
+        isolation_level = 'read_committed', #Read only committed messages
         value_deserializer = deserializer,
-        session_timeout_ms     = 30000, #30 sec, dont assume consumer dead
-        heartbeat_interval_ms  = 10000, #send heartbeat in every 10 sec
-        max_poll_interval_ms   = 300000 #processing for 5 minutes
+        session_timeout_ms     = 30000, #Consumer considered dead after 30 seconds without heartbeat
+        heartbeat_interval_ms  = 10000, #Send heartbeat every 10 seconds
+        max_poll_interval_ms   = 300000 #Maximum processing time = 5 minutes
     )
 
     print("Background Kafka reader started...")
@@ -128,7 +127,7 @@ kafka_thread.start()
 print("Kafka background thread started")
 
 
-# ── Build the Dash dashboard layout ──────────────────────────────────────────
+# Build the Dash dashboard layout
 # Dash is a Python library for building web dashboards
 # html.Div is like a box on the page
 # dcc.Graph shows a chart
@@ -259,7 +258,7 @@ app.layout = html.Div(children=[
 ], style={'backgroundColor': '#0a0a1a', 'minHeight': '100vh', 'fontFamily': 'Arial, sans-serif'})
 
 
-# ── Callback 1: Update market status text ─────────────────────────────────────
+# Callback 1: Update market status text 
 # A callback is a function that Dash calls automatically when something changes
 # Input('auto-refresh', 'n_intervals') means: run this every time the timer fires
 @app.callback(
@@ -289,11 +288,11 @@ def update_dropdown_options(n):
 
 #  Callback 3: Update all 4 summary cards 
 @app.callback(
-    Output('top-gainer-card',    'children'),
-    Output('top-loser-card',     'children'),
-    Output('most-active-card',   'children'),
+    Output('top-gainer-card','children'),
+    Output('top-loser-card','children'),
+    Output('most-active-card','children'),
     Output('market-summary-card','children'),
-    Input('auto-refresh', 'n_intervals')
+    Input('auto-refresh','n_intervals')
 )
 def update_summary_cards(n):
     # Show waiting message if no data yet
@@ -324,52 +323,52 @@ def update_summary_cards(n):
         gainer_change = "+" + str(top_gainer['change_percent']) + "%"
 
         gainer_card = html.Div(children=[
-            html.P("🟢 TOP GAINER TODAY",  style={'color': '#00ff88', 'fontWeight': 'bold', 'margin': '0', 'fontSize': '12px'}),
-            html.H2(gainer_symbol,          style={'color': 'white', 'margin': '5px 0', 'fontSize': '22px'}),
-            html.P("Rs." + gainer_ltp,      style={'color': 'white', 'margin': '0', 'fontSize': '18px'}),
-            html.P(gainer_change,           style={'color': '#00ff88', 'fontSize': '16px', 'fontWeight': 'bold', 'margin': '5px 0'})
+            html.P("🟢 TOP GAINER TODAY", style={'color': '#00ff88', 'fontWeight': 'bold', 'margin': '0', 'fontSize': '12px'}),
+            html.H2(gainer_symbol, style={'color': 'white', 'margin': '5px 0', 'fontSize': '22px'}),
+            html.P("Rs." + gainer_ltp, style={'color': 'white', 'margin': '0', 'fontSize': '18px'}),
+            html.P(gainer_change, style={'color': '#00ff88', 'fontSize': '16px', 'fontWeight': 'bold', 'margin': '5px 0'})
         ])
     else:
         gainer_card = html.P("No gainers yet", style={'color': '#888'})
 
     #  Top Loser card 
     if len(losers) > 0:
-        top_loser    = sorted_by_change[-1]
+        top_loser = sorted_by_change[-1]
         loser_symbol = top_loser['symbol']
-        loser_ltp    = str(top_loser['ltp'])
+        loser_ltp = str(top_loser['ltp'])
         loser_change = str(top_loser['change_percent']) + "%"
 
         loser_card = html.Div(children=[
-            html.P("🔴 TOP LOSER TODAY",  style={'color': '#ff4444', 'fontWeight': 'bold', 'margin': '0', 'fontSize': '12px'}),
-            html.H2(loser_symbol,          style={'color': 'white', 'margin': '5px 0', 'fontSize': '22px'}),
-            html.P("Rs." + loser_ltp,      style={'color': 'white', 'margin': '0', 'fontSize': '18px'}),
-            html.P(loser_change,           style={'color': '#ff4444', 'fontSize': '16px', 'fontWeight': 'bold', 'margin': '5px 0'})
+            html.P("🔴 TOP LOSER TODAY", style={'color': '#ff4444', 'fontWeight': 'bold', 'margin': '0', 'fontSize': '12px'}),
+            html.H2(loser_symbol, style={'color': 'white', 'margin': '5px 0', 'fontSize': '22px'}),
+            html.P("Rs." + loser_ltp, style={'color': 'white', 'margin': '0', 'fontSize': '18px'}),
+            html.P(loser_change, style={'color': '#ff4444', 'fontSize': '16px', 'fontWeight': 'bold', 'margin': '5px 0'})
         ])
     else:
         loser_card = html.P("No losers yet", style={'color': '#888'})
 
     #  Most Active card 
-    most_active        = sorted_by_volume[0]
+    most_active = sorted_by_volume[0]
     most_active_symbol = most_active['symbol']
     most_active_volume = str(most_active['volume'])
-    most_active_ltp    = str(most_active['ltp'])
+    most_active_ltp = str(most_active['ltp'])
 
     active_card = html.Div(children=[
-        html.P("🟡 MOST ACTIVE TODAY",       style={'color': '#ffaa00', 'fontWeight': 'bold', 'margin': '0', 'fontSize': '12px'}),
-        html.H2(most_active_symbol,           style={'color': 'white', 'margin': '5px 0', 'fontSize': '22px'}),
-        html.P("Rs." + most_active_ltp,       style={'color': 'white', 'margin': '0', 'fontSize': '18px'}),
+        html.P("🟡 MOST ACTIVE TODAY", style={'color': '#ffaa00', 'fontWeight': 'bold', 'margin': '0', 'fontSize': '12px'}),
+        html.H2(most_active_symbol, style={'color': 'white', 'margin': '5px 0', 'fontSize': '22px'}),
+        html.P("Rs." + most_active_ltp, style={'color': 'white', 'margin': '0', 'fontSize': '18px'}),
         html.P("Volume: " + most_active_volume, style={'color': '#ffaa00', 'fontSize': '14px', 'margin': '5px 0'})
     ])
 
     #  Market Summary card 
-    total_gainers  = len(gainers)
-    total_losers   = len(losers)
+    total_gainers = len(gainers)
+    total_losers = len(losers)
     total_tracking = len(latest_prices)
 
     summary_card = html.Div(children=[
-        html.P("📊 MARKET SUMMARY",                   style={'color': '#8888ff', 'fontWeight': 'bold', 'margin': '0', 'fontSize': '12px'}),
-        html.P("Advances: " + str(total_gainers),     style={'color': '#00ff88', 'fontSize': '16px', 'margin': '5px 0'}),
-        html.P("Declines: " + str(total_losers),      style={'color': '#ff4444', 'fontSize': '16px', 'margin': '5px 0'}),
+        html.P("📊 MARKET SUMMARY", style={'color': '#8888ff', 'fontWeight': 'bold', 'margin': '0', 'fontSize': '12px'}),
+        html.P("Advances: " + str(total_gainers), style={'color': '#00ff88', 'fontSize': '16px', 'margin': '5px 0'}),
+        html.P("Declines: " + str(total_losers), style={'color': '#ff4444', 'fontSize': '16px', 'margin': '5px 0'}),
         html.P("Tracking: " + str(total_tracking) + " stocks", style={'color': 'white', 'fontSize': '14px', 'margin': '5px 0'})
     ])
 
@@ -388,8 +387,8 @@ def update_price_chart(n, selected_stock):
     empty_fig.update_layout(
         paper_bgcolor = '#0d2137',
         plot_bgcolor  = '#0a0a1a',
-        font          = {'color': 'white'},
-        title         = 'Select a stock from the dropdown above to see its chart'
+        font = {'color': 'white'},
+        title = 'Select a stock from the dropdown above to see its chart'
     )
 
     if selected_stock is None:
@@ -404,7 +403,7 @@ def update_price_chart(n, selected_stock):
     time_list  = []
 
     try:
-        db_conn   = get_new_db_connection()
+        db_conn = get_new_db_connection()
         db_cursor = db_conn.cursor()
 
         db_cursor.execute("""
@@ -431,7 +430,7 @@ def update_price_chart(n, selected_stock):
         print("Chart data fetch error: " + str(error))
         # If DB fails, just show current price as single point
         price_list = [latest_prices[selected_stock]['ltp']]
-        time_list  = [datetime.now(IST).strftime('%H:%M:%S')]
+        time_list = [datetime.now(IST).strftime('%H:%M:%S')]
 
     current_stock = latest_prices[selected_stock]
 
@@ -457,8 +456,8 @@ def update_price_chart(n, selected_stock):
     fig = go.Figure()
 
     fig.add_trace(go.Scatter(
-        x    = time_list,
-        y    = price_list,
+        x = time_list,
+        y = price_list,
         mode = 'lines',
         name = selected_stock,
         line = {'color': line_color, 'width': 2}
@@ -466,22 +465,22 @@ def update_price_chart(n, selected_stock):
 
     # Add a dashed horizontal line at today's open price for reference
     fig.add_hline(
-        y                = current_stock['open'],
-        line_dash        = 'dash',
-        line_color       = '#555555',
-        annotation_text  = 'Open: Rs.' + str(current_stock['open']),
+        y = current_stock['open'],
+        line_dash = 'dash',
+        line_color = '#555555',
+        annotation_text = 'Open: Rs.' + str(current_stock['open']),
         annotation_font_color = '#888888'
     )
 
     fig.update_layout(
-        title         = chart_title,
+        title = chart_title,
         paper_bgcolor = '#0d2137',
-        plot_bgcolor  = '#0a0a1a',
-        font          = {'color': 'white'},
-        xaxis         = {'title': 'Time (IST)', 'gridcolor': '#1a1a2e'},
-        yaxis         = {'title': 'Price (Rs.)', 'gridcolor': '#1a1a2e'},
-        showlegend    = False,
-        margin        = {'l': 60, 'r': 20, 't': 50, 'b': 50}
+        plot_bgcolor = '#0a0a1a',
+        font = {'color': 'white'},
+        xaxis= {'title': 'Time (IST)', 'gridcolor': '#1a1a2e'},
+        yaxis= {'title': 'Price (Rs.)', 'gridcolor': '#1a1a2e'},
+        showlegend= False,
+        margin= {'l': 60, 'r': 20, 't': 50, 'b': 50}
     )
 
     return fig
@@ -497,7 +496,7 @@ def update_prices_table(n):
         return html.P("Waiting for live prices...", style={'color': '#888', 'padding': '20px'})
 
     # Sort stocks by change percent (biggest gainers first)
-    all_stocks    = list(latest_prices.values())
+    all_stocks = list(latest_prices.values())
     sorted_stocks = sorted(all_stocks, key=lambda x: x['change_percent'], reverse=True)
 
     # Build table rows
@@ -505,13 +504,13 @@ def update_prices_table(n):
 
     # Header row
     header_row = html.Tr(children=[
-        html.Th("Symbol",   style={'color': '#aaaaaa', 'padding': '8px 12px', 'textAlign': 'left',  'fontSize': '12px'}),
-        html.Th("LTP",      style={'color': '#aaaaaa', 'padding': '8px 12px', 'textAlign': 'right', 'fontSize': '12px'}),
-        html.Th("Change",   style={'color': '#aaaaaa', 'padding': '8px 12px', 'textAlign': 'right', 'fontSize': '12px'}),
+        html.Th("Symbol", style={'color': '#aaaaaa', 'padding': '8px 12px', 'textAlign': 'left',  'fontSize': '12px'}),
+        html.Th("LTP", style={'color': '#aaaaaa', 'padding': '8px 12px', 'textAlign': 'right', 'fontSize': '12px'}),
+        html.Th("Change", style={'color': '#aaaaaa', 'padding': '8px 12px', 'textAlign': 'right', 'fontSize': '12px'}),
         html.Th("Change %", style={'color': '#aaaaaa', 'padding': '8px 12px', 'textAlign': 'right', 'fontSize': '12px'}),
         html.Th("Day High", style={'color': '#aaaaaa', 'padding': '8px 12px', 'textAlign': 'right', 'fontSize': '12px'}),
-        html.Th("Day Low",  style={'color': '#aaaaaa', 'padding': '8px 12px', 'textAlign': 'right', 'fontSize': '12px'}),
-        html.Th("Volume",   style={'color': '#aaaaaa', 'padding': '8px 12px', 'textAlign': 'right', 'fontSize': '12px'}),
+        html.Th("Day Low", style={'color': '#aaaaaa', 'padding': '8px 12px', 'textAlign': 'right', 'fontSize': '12px'}),
+        html.Th("Volume", style={'color': '#aaaaaa', 'padding': '8px 12px', 'textAlign': 'right', 'fontSize': '12px'}),
     ])
     all_rows.append(header_row)
 
@@ -521,13 +520,13 @@ def update_prices_table(n):
         # Green color for positive change, red for negative, white for zero
         if stock['change_percent'] > 0:
             change_color = '#00ff88'
-            sign         = '+'
+            sign = '+'
         elif stock['change_percent'] < 0:
             change_color = '#ff4444'
-            sign         = ''
+            sign= ''
         else:
             change_color = 'white'
-            sign         = ''
+            sign = ''
 
         data_row = html.Tr(children=[
             html.Td(stock['symbol'],
@@ -550,11 +549,11 @@ def update_prices_table(n):
 
     return html.Table(
         children = all_rows,
-        style    = {'width': '100%', 'borderCollapse': 'collapse'}
+        style = {'width': '100%', 'borderCollapse': 'collapse'}
     )
 
 
-# ── Callback 6: End of Day performance bar chart ──────────────────────────────
+# Callback 6: End of Day performance bar chart 
 # During market hours: shows current intraday performance of all 50 stocks
 # After market closes: shows final end of day performance
 # Both use the same bar chart, only the title changes
@@ -569,8 +568,8 @@ def update_eod_chart(n):
     empty_fig.update_layout(
         paper_bgcolor = '#0d2137',
         plot_bgcolor  = '#0a0a1a',
-        font          = {'color': 'white'},
-        title         = 'Waiting for data...'
+        font = {'color': 'white'},
+        title = 'Waiting for data...'
     )
 
     if len(latest_prices) == 0:
@@ -581,9 +580,9 @@ def update_eod_chart(n):
     # Sort stocks by change percent for the bar chart
     sorted_stocks = sorted(all_stocks, key=lambda x: x['change_percent'], reverse=True)
 
-    symbol_names   = []
-    change_values  = []
-    bar_colors     = []
+    symbol_names= []
+    change_values= []
+    bar_colors = []
 
     for stock in sorted_stocks:
         symbol_names.append(stock['symbol'])
@@ -599,39 +598,39 @@ def update_eod_chart(n):
     fig = go.Figure()
 
     fig.add_trace(go.Bar(
-        x             = symbol_names,
-        y             = change_values,
-        marker_color  = bar_colors,
-        text          = [str(v) + "%" for v in change_values],
-        textposition  = 'outside',
-        textfont      = {'color': 'white', 'size': 10}
+        x = symbol_names,
+        y= change_values,
+        marker_color= bar_colors,
+        text= [str(v) + "%" for v in change_values],
+        textposition = 'outside',
+        textfont = {'color': 'white', 'size': 10}
     ))
 
     # Add a horizontal line at 0% for easy reference
     fig.add_hline(
-        y          = 0,
+        y= 0,
         line_color = '#555555',
         line_width = 1
     )
 
     fig.update_layout(
         paper_bgcolor = '#0d2137',
-        plot_bgcolor  = '#0a0a1a',
-        font          = {'color': 'white'},
-        xaxis         = {
-            'title'     : 'Stock Symbol',
-            'tickangle' : -45,
-            'gridcolor' : '#1a1a2e',
-            'tickfont'  : {'size': 10}
-        },
-        yaxis         = {
-            'title'    : 'Change from Open (%)',
+        plot_bgcolor = '#0a0a1a',
+        font = {'color': 'white'},
+        xaxis = {
+            'title': 'Stock Symbol',
+            'tickangle': -45,
             'gridcolor': '#1a1a2e',
-            'zeroline' : True,
+            'tickfont': {'size': 10}
+        },
+        yaxis = {
+            'title': 'Change from Open (%)',
+            'gridcolor': '#1a1a2e',
+            'zeroline': True,
             'zerolinecolor': '#555555'
         },
-        showlegend    = False,
-        margin        = {'l': 60, 'r': 20, 't': 30, 'b': 120}
+        showlegend= False,
+        margin = {'l': 60, 'r': 20, 't': 30, 'b': 120}
     )
 
     # Change title based on market status
@@ -643,7 +642,7 @@ def update_eod_chart(n):
     return chart_title, fig
 
 
-# ── Start the dashboard ───────────────────────────────────────────────────────
+#  Start the dashboard 
 if __name__ == '__main__':
     print("Starting Dashboard...")
     print("Open Brave browser and go to: http://localhost:8050")
