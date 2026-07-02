@@ -8,16 +8,7 @@
 # Every alert is saved to stock_alerts table in MySQL
 # We also print every alert to terminal so you can see it live
 
-import json
-import time
-import pytz
-from datetime import datetime
-from kafka import KafkaConsumer
-import mysql.connector
-from config import(
-	KAFKA_BROKER, KAFKA_TOPIC, DB_HOST, DB_USER, DB_PASSWORD, DB_NAME,
-	MARKET_OPEN, MARKET_CLOSE
-	)
+
 
 import json
 import time
