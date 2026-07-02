@@ -167,10 +167,11 @@ smart_socket = SmartWebSocketV2(
 
 
 def on_open(ws):
-	print("WebSocket connected!")
-	print("Subscribing to " + str(len(ws_token_list)) + " stocks...")
-	subscribe_list = [{"exchangeType": 1, "tokens": ws_token_list}]
-	smart_socket.subscribe("nifty50_session", 2, subscribe_list)  
+    print("WebSocket connected!")
+    print("Subscribing to " + str(len(ws_token_list)) + " stocks...")
+    
+    subscribe_list = [{"exchangeType": 1, "tokens": ws_token_list}]
+    smart_socket.subscribe("nifty50_session", 2, subscribe_list)
 
 def on_error(ws, error):
 	print("WebSocket error: " + str(error))
@@ -180,7 +181,7 @@ def on_close(ws):
 	print("WebSocket closed")
 
 smart_socket.on_open  = on_open
-smart_socket.on_data  = on_tick    # on_data not on_tick for V2
+smart_socket.on_data  = on_tick    
 smart_socket.on_error = on_error
 smart_socket.on_close = on_close
 
