@@ -30,7 +30,7 @@ def get_nifty50_symbols_from_nse():
     
     # The CSV has a column called 'Symbol' with stock names like RELIANCE, INFY
     # .str.strip() removes any extra spaces before or after the name
-    # .tolist() converts the column to a simple thon list
+    # .tolist() converts the column to a simple python list
     symbol_list = df['Symbol'].str.strip().tolist()
     print("NSE gave us: "+str(len(symbol_list))+" stocks")
     return symbol_list
@@ -48,7 +48,7 @@ def get_tokens_from_angel_one(symbol_list):
     all_instruments=pd.DataFrame(response.json())
     print("Angel One ScripMaster has "+str(len(all_instruments))+" instruments")
 
-      # ── ADD THESE DEBUG LINES ──────────────────────────────────────
+    #Debug lines
     print("\nColumn names in ScripMaster:")
     print(all_instruments.columns.tolist())
 
@@ -64,7 +64,6 @@ def get_tokens_from_angel_one(symbol_list):
 
     print("\nFirst symbol from NSE list with -EQ added:")
     print(symbol_list[0] + '-EQ')
-    # ── END DEBUG LINES ───────────────────────────────────────────
 
 
 
@@ -77,7 +76,7 @@ def get_tokens_from_angel_one(symbol_list):
     #Now filter the big table to keep only our 50 stocks
     #Condition 1: exch_seg must be NSE, Con. 2: instrumenttype must be -EQ, Con. 3: Symbol must be in our list of 5 stocks
     condition1=all_instruments['exch_seg']=='NSE'
-    condition2=all_instruments['instrumenttype']==''
+    condition2=all_instruments['instrumenttype']=='' #NSE Cash Equity — normal sharesRELIANCE, INFY, TCS
     condition3=all_instruments['symbol'].isin(symbol_list_eq)
 
 
